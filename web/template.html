@@ -11,7 +11,7 @@ button{margin-top:10px;font:inherit;font-size:1.2em;padding:8px 34px;background:
 button:hover,button:focus{background:#3d311d;outline:2px solid #c9a961}
 .credit{position:fixed;bottom:6px;left:8px;font-size:11px;opacity:.5}
 
-#map{display:none;position:fixed;inset:0;background:#0b1a2a}#cv{display:block;width:100%;height:100%;cursor:grab;touch-action:none}#tip{position:fixed;pointer-events:none;background:#000c;color:#fff;font:12px sans-serif;padding:3px 6px;border-radius:3px;display:none;z-index:50}#hint{position:fixed;top:6px;left:8px;font:12px sans-serif;color:#fff;background:#0008;padding:3px 8px;border-radius:3px}
+#map{display:none;position:fixed;inset:0;background:#0b1a2a}#cv{display:block;width:100%;height:100%;cursor:grab;touch-action:none}#tip{position:fixed;pointer-events:none;background:#000c;color:#fff;font:12px sans-serif;padding:3px 6px;border-radius:3px;display:none;z-index:50}#hint{position:fixed;top:6px;left:8px;max-width:calc(100% - 100px);font:12px sans-serif;color:#fff;background:#0008;padding:3px 8px;border-radius:3px}#panel{position:fixed;left:50%;transform:translateX(-50%);bottom:46px;width:min(440px,calc(100% - 16px));box-sizing:border-box;background:#101820ee;border:1px solid #c9a961;border-radius:6px;padding:8px 10px;font:13px sans-serif;color:#eee;display:none;z-index:40}#panel .row{display:flex;align-items:center;gap:6px;margin:4px 0;flex-wrap:wrap}#panel button{font:13px sans-serif;padding:4px 10px;margin:0;background:#2a2215;color:#f3e6c8;border:1px solid #c9a961;border-radius:4px}#panel input[type=range]{flex:1;min-width:120px}#panel input[type=number]{width:70px;font-size:16px}#panel select{font-size:14px}#go3{background:#7a1e14!important;font-weight:bold;width:100%;padding:8px!important;margin-top:4px!important}#toast{position:fixed;top:40%;left:50%;transform:translateX(-50%);background:#000d;color:#fff;font:15px sans-serif;padding:8px 14px;border-radius:6px;display:none;z-index:60}
 #crash{display:none;position:fixed;top:8px;left:50%;transform:translateX(-50%);background:#600e;padding:8px 12px;font:13px sans-serif}
 @keyframes fade{from{opacity:0}to{opacity:1}}
 </style></head><body>
@@ -22,9 +22,16 @@ button:hover,button:focus{background:#3d311d;outline:2px solid #c9a961}
  <div class="sub" data-t="sub">nach Conrad Adlmaier, „Blick in die Zukunft“ (1950–1961)</div>
  <button id="go" data-t="start" autofocus>Beginnen</button>
 </div>
-<div id="map"><canvas id="cv"></canvas><div id="hint">Mausrad / zwei Finger = Zoom · Ziehen = Verschieben · Höhendaten: ETOPO1 (NOAA)</div></div><div id="tip"></div>
+<div id="map"><canvas id="cv"></canvas><div id="hint"></div>
+<div id="panel">
+ <div id="pinfo"></div>
+ <div class="row">Auslöser: <select id="mode"><option value="exp">Explosion im Wasser</option><option value="ast">Einschlag aus dem All</option></select></div>
+ <div class="row" id="rowE">Energie: <button id="eM">−</button><input type="range" id="eR" min="-2" max="2" step="0.05" value="0"><button id="eP">+</button><b id="eV"></b></div>
+ <div class="row" id="rowA" style="display:none">Durchmesser <input type="number" id="aD" value="300" min="10" max="10000" step="10"> m · Tempo <input type="number" id="aV" value="20" min="11" max="72" step="1"> km/s <b id="aE"></b></div>
+ <button id="go3">Simulation starten</button>
+</div></div><div id="toast"></div><div id="tip"></div>
 <div class="credit" id="credit" style="left:90px">Bild: Sassoferrato, „Die Jungfrau im Gebet“ (gemeinfrei, Wikimedia Commons)</div>
-<div id="ver" style="position:fixed;top:4px;right:6px;z-index:99999;font:bold 13px monospace;padding:1px 8px;background:#ffeb3b;color:#000;border:2px solid #000;pointer-events:none">v0.2.0</div>
+<div id="ver" style="position:fixed;top:4px;right:6px;z-index:99999;font:bold 13px monospace;padding:1px 8px;background:#ffeb3b;color:#000;border:2px solid #000;pointer-events:none">v0.3.0</div>
 <script>
 /* Shared debug cover for every mockup.
    Adds an always-visible red Debug button + bright version stamp (top-right), Reload-if-newer check via root version.txt; Debug bottom-left (next to Voice),
@@ -33,7 +40,7 @@ button:hover,button:focus{background:#3d311d;outline:2px solid #c9a961}
    Other scripts: DebugCover.log(type,data), DebugCover.state(name,fn). */
 (function(){
   if(window.DebugCover)return;
-  var APPV='0.2.0', MAX=500, t0=performance.now();
+  var APPV='0.3.0', MAX=500, t0=performance.now();
   var mock='irlmaier';
   var log=[], providers={};
   function ev(type,d){var e={t:new Date().toISOString(),ms:Math.round(performance.now()-t0),type:type};if(d)for(var k in d)e[k]=d[k];log.push(e);if(log.length>MAX)log.shift();}
@@ -86,7 +93,7 @@ button:hover,button:focus{background:#3d311d;outline:2px solid #c9a961}
 </script>
 <script>
 "use strict";
-const VERSION="0.2.0";
+const VERSION="0.3.0";
 
 const log=[];function L(m){log.push(new Date().toISOString()+' '+m);if(log.length>500)log.shift();try{localStorage.setItem('irl_log',JSON.stringify(log.slice(-100)))}catch(e){}}
 // Crash detection
@@ -128,15 +135,17 @@ async function initMap(){
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d'),tip=document.getElementById('tip');
 function cellW(){return KX/KY} // cell width relative to height
 function fit(){const w=innerWidth,h=innerHeight;cv.width=w*devicePixelRatio;cv.height=h*devicePixelRatio;
- const ww=GW*cellW(),s=Math.min(w/ww,h/GH);view={s:s,x:(w-ww*s)/2,y:(h-GH*s)/2}}
+ const ww=GW*cellW();let s=Math.min(w/ww,h/GH);if(h>w*1.2)s=Math.min(h/GH,w*2.2/ww);const cx=((4-LON0)/STEP)*cellW()*s;view={s:s,x:Math.min(0,Math.max(w-ww*s,w/2-cx))||(w-ww*s)/2,y:(h-GH*s)/2};if(ww*s<=w)view.x=(w-ww*s)/2}
 function toScr(lat,lon){return [view.x+((lon-LON0)/STEP)*cellW()*view.s,view.y+((LAT0-lat)/STEP)*view.s]}
 function toCell(sx,sy){return [Math.floor((sx-view.x)/(view.s*cellW())),Math.floor((sy-view.y)/view.s)]}
 function draw(){if(!mapReady)return;const d=devicePixelRatio;ctx.setTransform(d,0,0,d,0,0);ctx.fillStyle='#0b1a2a';ctx.fillRect(0,0,innerWidth,innerHeight);
  ctx.imageSmoothingEnabled=view.s<3;ctx.drawImage(off,view.x,view.y,GW*cellW()*view.s,GH*view.s);
  ctx.textAlign='center';ctx.font='bold 13px Georgia';ctx.fillStyle='#ffffffb0';ctx.strokeStyle='#0008';ctx.lineWidth=3;
- for(const[n,la,lo]of LANDS){const[x,y]=toScr(la,lo);ctx.strokeText(n,x,y);ctx.fillText(n,x,y)}
+ const W=innerWidth;function cl(x,tw,al){const L=al==='center'?x-tw/2:x;const nx=Math.max(4,Math.min(W-tw-4,L));return al==='center'?nx+tw/2:nx}
+ for(const[n,la,lo]of LANDS){let[x,y]=toScr(la,lo);x=cl(x,ctx.measureText(n).width,'center');ctx.strokeText(n,x,y);ctx.fillText(n,x,y)}
  ctx.font='12px sans-serif';ctx.textAlign='left';
- for(const[n,la,lo]of PLACES){const[x,y]=toScr(la,lo);ctx.fillStyle=n==='Berlin'?'#ffd54f':'#fff';ctx.beginPath();ctx.arc(x,y,3.5,0,7);ctx.fill();ctx.strokeStyle='#000';ctx.lineWidth=1;ctx.stroke();ctx.lineWidth=3;ctx.strokeStyle='#000a';ctx.strokeText(n,x+6,y+4);ctx.fillText(n,x+6,y+4)}}
+ for(const[n,la,lo]of PLACES){const[x,y]=toScr(la,lo);if(x<0||x>W||y<0||y>innerHeight)continue;ctx.fillStyle=n==='Berlin'?'#ffd54f':'#fff';ctx.beginPath();ctx.arc(x,y,3.5,0,7);ctx.fill();ctx.strokeStyle='#000';ctx.lineWidth=1;ctx.stroke();ctx.lineWidth=3;ctx.strokeStyle='#000a';const tw=ctx.measureText(n).width;let tx=(x+6+tw>W-4)?x-6-tw:x+6;if(tx<4)tx=x+6;ctx.strokeText(n,tx,y+4);ctx.fillText(n,tx,y+4)}
+ if(typeof mark!=='undefined'&&mark){const[x,y]=toScr(mark.lat,mark.lon);ctx.strokeStyle='#ff1744';ctx.lineWidth=3;ctx.beginPath();ctx.arc(x,y,9,0,7);ctx.stroke();ctx.beginPath();ctx.moveTo(x-14,y);ctx.lineTo(x+14,y);ctx.moveTo(x,y-14);ctx.lineTo(x,y+14);ctx.stroke()}}
 function zoom(f,cx,cy){const ns=Math.max(0.5,Math.min(40,view.s*f));f=ns/view.s;view.x=cx-(cx-view.x)*f;view.y=cy-(cy-view.y)*f;view.s=ns;draw()}
 cv.addEventListener('wheel',e=>{e.preventDefault();zoom(e.deltaY<0?1.2:1/1.2,e.clientX,e.clientY)},{passive:false});
 const pts=new Map();let pinch=0;
@@ -153,6 +162,33 @@ cv.addEventListener('pointermove',e=>{
 function up(e){pts.delete(e.pointerId);if(pts.size<2)pinch=0;if(!pts.size)cv.style.cursor='grab'}
 cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);cv.addEventListener('pointerleave',()=>tip.style.display='none');
 addEventListener('resize',()=>{if(mapReady){fit();draw()}});
+
+// ---- v0.3.0: Einschlagspunkt ----
+const touch=matchMedia('(pointer:coarse)').matches;
+document.getElementById('hint').textContent=touch?'Tippen = Punkt im Meer · zwei Finger = Zoom':'Klick = Punkt im Meer setzen · Mausrad = Zoom · Ziehen = Verschieben · Daten: ETOPO1 (NOAA)';
+let mark=null;
+function hav(a,b,c,d){const R=6371,r=Math.PI/180,x=Math.sin((c-a)*r/2)**2+Math.cos(a*r)*Math.cos(c*r)*Math.sin((d-b)*r/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
+function coastDist(lat,lon){let best=1e9;for(let r=0;r<GH;r++){const la=LAT0-r*STEP;for(let c=0;c<GW;c++){if(core.irl_height(c,r)>0){const d=hav(lat,lon,la,LON0+c*STEP);if(d<best)best=d}}}return best}
+function toast(t){const e=document.getElementById('toast');e.textContent=t;e.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display='none',1500)}
+function fmtMt(mt){return mt>=1?mt.toFixed(mt<10?1:0)+' Mt':(mt*1000).toFixed(0)+' kt'}
+function energy(){if(document.getElementById('mode').value==='exp')return Math.pow(10,+document.getElementById('eR').value);
+ const d=+document.getElementById('aD').value,v=+document.getElementById('aV').value*1000,m=3000*Math.PI/6*d*d*d;return 0.5*m*v*v/4.184e15}
+function upd(){const ast=document.getElementById('mode').value==='ast';document.getElementById('rowE').style.display=ast?'none':'flex';document.getElementById('rowA').style.display=ast?'flex':'none';
+ document.getElementById('eV').textContent=fmtMt(Math.pow(10,+document.getElementById('eR').value));document.getElementById('aE').textContent='≈ '+fmtMt(energy());
+ DebugCover.log('params',{mode:document.getElementById('mode').value,mt:+energy().toPrecision(3)})}
+['mode','eR','aD','aV'].forEach(i=>document.getElementById(i).addEventListener('input',upd));
+document.getElementById('eM').onclick=()=>{const r=document.getElementById('eR');r.value=Math.max(-2,+r.value-0.1);upd()};
+document.getElementById('eP').onclick=()=>{const r=document.getElementById('eR');r.value=Math.min(2,+r.value+0.1);upd()};
+document.getElementById('go3').onclick=()=>{DebugCover.log('sim-start-pressed');toast('Die Wellenphysik kommt in Punkt 4.')};
+function setMark(sx,sy){const[c,r]=toCell(sx,sy);if(c<0||r<0||c>=GW||r>=GH)return;const hgt=core.irl_height(c,r);
+ if(hgt>=0){toast('Nur im Meer');DebugCover.log('mark-rejected',{c,r,h:hgt});return}
+ const lat=LAT0-r*STEP,lon=LON0+c*STEP;mark={lat,lon,depth:-hgt};
+ const k=x=>Math.round(x)+' km';
+ document.getElementById('pinfo').innerHTML='<b>Einschlagspunkt</b> '+lat.toFixed(2)+'° N, '+lon.toFixed(2)+'° O · Tiefe '+(-hgt)+' m<br>Küste '+k(coastDist(lat,lon))+' · London '+k(hav(lat,lon,51.51,-0.13))+' · Hamburg '+k(hav(lat,lon,53.55,9.99))+' · Berlin '+k(hav(lat,lon,52.52,13.40));
+ document.getElementById('panel').style.display='block';upd();draw();DebugCover.log('mark',{lat:+lat.toFixed(3),lon:+lon.toFixed(3),depth:-hgt})}
+let downAt=null;cv.addEventListener('pointerdown',e=>{downAt=[e.clientX,e.clientY,pts.size]},true);
+cv.addEventListener('pointerup',e=>{if(downAt&&downAt[2]===0&&Math.hypot(e.clientX-downAt[0],e.clientY-downAt[1])<8)setMark(e.clientX,e.clientY);downAt=null},true);
+DebugCover.state('mark',()=>({mark:mark,energyMt:mark?+energy().toPrecision(3):null}));
 if(new URLSearchParams(location.search).has('karte'))start();
 DebugCover.state('map',()=>({mapView:{s:+view.s.toFixed(3),x:Math.round(view.x),y:Math.round(view.y)},mapReady:mapReady}));
 </script>
